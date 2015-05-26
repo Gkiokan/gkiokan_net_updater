@@ -20,6 +20,8 @@ class Update {
 
   public $new_elements = null;
   public $old_elements = null;
+  public $found_elements = null;
+  public $must_upload_elements = null;
 
   public function __construct(){
     echo "<pre>";
@@ -55,16 +57,6 @@ class Update {
       $code = file_get_contents($dir ."/". $file);
       $tokens = token_get_all($code);
       $count = count($tokens);
-      /* -- Here you get only the Class Name if needen --
-      for ($i = 2; $i < $count; $i++) {
-        if (   $tokens[$i - 2][0] == T_CLASS
-            && $tokens[$i - 1][0] == T_WHITESPACE
-            && $tokens[$i][0] == T_STRING) {
-
-            $class_name = $tokens[$i][1];
-            $classes[] = $class_name;
-        }
-      } --- */
 
       $new_file[$file] = $this->build_new_token($tokens, $file);
 
@@ -74,7 +66,6 @@ class Update {
     $p=='core' ? $this->new_elements = $new_file : $this->old_elements = $new_file;
     return $new_file;
   }
-
 
   public function build_new_token($tokens=array(), $file=null){
       $i=0;
@@ -126,7 +117,49 @@ class Update {
       return $new;
   }
 
+  public function diff(){
+      $old_files = $this->old_elements;
+      $new_files = $this->new_elements;
+      $found = null;
+      $update= null;
 
+      foreach($new_files as $new){
+          //debug($new);
+          $file = $new['file'];
+          $exist = !empty($old_files[$file]);
+
+          // same class already exists
+          if($exist):
+          $found[$file]['version']['old'] = $old_files[$file]['variables']['$version'];
+          $found[$file]['version']['new'] = $new_files[$file]['variables']['$version'];
+          // If the Class doest NOT exists
+          else:
+          $found[$file]['version']['old'] = NULL;
+          $found[$file]['version']['new'] = $new_files[$file]['variables']['$version'];
+          endif;
+
+          // Generall stuff for do all over the time
+          $version_old = self::number_cast($found[$file]['version']['old']);
+          $version_new = self::number_cast($found[$file]['version']['new']);
+
+          $found[$file]['found'] = $exist ? "TRUE" : "FALSE";
+          $found[$file]['update'] = $version_new > $version_old ? "TRUE" : "FALSE";
+
+          // If update able push it to the must upload array
+          if($found[$file]['update']==='TRUE')
+          $update[$file] = $found[$file]['version']; //$found[$file];
+      }
+
+      $this->found_elements = $found;
+      $this->must_upload_elements = $update;
+      return $found;
+  }
+
+  public static function number_cast($a){
+      $b = str_replace("\"", '', $a);
+      $b = (double)$b;
+      return $b;
+  }
 
 }
 

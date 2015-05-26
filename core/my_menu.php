@@ -7,7 +7,7 @@
 */
 
 class my_Menu{
-    public $version = "1.2";
+    public $version = "0.8.77";
     public $name    = "SomeName";
 
     public function do_something($a, $b){ return false; }
